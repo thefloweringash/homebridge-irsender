@@ -92,9 +92,11 @@ module.exports = (homebridge) => {
             this.mqtt_client = mqtt.connect(mqtt_config);
             this.mqtt_client.on('error', this.onMQTTError.bind(this));
 
-            this.encode = ENCODERS[this.config.encoding];
-            if (!this.encode) {
-                throw new Error(`Unknown encoding: ${this.config.encoding}`);
+            if (this.config.encoding) {
+                this.encode = ENCODERS[this.config.encoding];
+                if (!this.encode) {
+                    throw new Error(`Unknown encoding: ${this.config.encoding}`);
+                }
             }
         }
 
