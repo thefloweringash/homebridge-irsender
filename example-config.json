@@ -1,0 +1,37 @@
+{
+  "accessories": [
+    {
+      "accessory": "ir-radioswitch",
+      "name": "Lights",
+      "caption": "Panasonic Lights",
+      "mqtt": {
+        "url": "mqtt://test.mosquitto.org",
+        "username": "someuser",
+        "password": "somepassword",
+        "clientId": "mqtt-controller-switch-livingroom-lights"
+      },
+      "sendTopic": "ir/widget1/send",
+      "encoding": "panasonic_bytes",
+      "switches": [
+        {"name": "On",          "subtype": "on",          "code": "LFIJLSQ="},
+        {"name": "Night Light", "subtype": "night_light", "code": "LFIJLic="},
+        {"name": "Full Light",  "subtype": "full_light",  "code": "LFIJLCU="}
+      ],
+      "off": "LFIJLyY="
+    },
+    {
+      "accessory": "ir-momentaryswitch",
+      "name": "TV",
+      "caption": "DMM.make TV",
+      "mqtt": {
+        "url": "mqtt://test.mosquitto.org",
+        "username": "someuser",
+        "password": "somepasswrd",
+        "clientId": "mqtt-controller-switch-livingroom-tv"
+      },
+      "encoding": "nec",
+      "sendTopic": "ir/widget1/send",
+      "action": "P8D9AA=="
+    }
+  ]
+}
