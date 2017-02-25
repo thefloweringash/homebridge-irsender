@@ -67,8 +67,6 @@ const ENCODERS = {
         }
         payload.push(BIT_MARK);
 
-        console.log(`sending: ${JSON.stringify(payload)}`);
-
         return toBuffer(payload);
     },
 };
