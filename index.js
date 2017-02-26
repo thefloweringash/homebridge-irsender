@@ -319,9 +319,7 @@ module.exports = (homebridge) => {
                 this.encodeTargetHeatingCoolingState[value];
 
             if (validHeatingCoolingState) {
-                this.heatingCoolingState = value;
-                this.pushState();
-                callback();
+                super.setTargetHeatingCoolingState(value, callback);
             }
             else {
                 callback('Not supported'); // TODO: this doesn't seem to signal error
