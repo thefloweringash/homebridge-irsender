@@ -1,4 +1,5 @@
 const AirconMitsubishiGP82Coding = require('./aircon_mitsubishi_gp82');
+const AirconDakinCoding = require('./aircon_daikin');
 
 const withEncoding = (encoding, buffer) => {
     const encoding_buffer = Buffer.from([encoding]);
@@ -340,7 +341,60 @@ module.exports = (homebridge) => {
         }
     }
 
+    class AirconDaikin extends Aircon {
+        constructor(log, config) {
+            super(log, config);
+
+            this.thermostat.getCharacteristic(Characteristic.TargetTemperature)
+                .setProps({ minValue: 16, maxValue: 31 });
+
+            this.encodeTargetHeatingCoolingState = {
+                [Characteristic.TargetHeatingCoolingState.HEAT]: AirconMitsubishiGP82Coding.MODE.heating,
+                [Characteristic.TargetHeatingCoolingState.COOL]: AirconMitsubishiGP82Coding.MODE.cooling,
+            };
+        }
+
+        setTargetHeatingCoolingState(value, callback) {
+            const validHeatingCoolingState =
+                (value === Characteristic.TargetHeatingCoolingState.OFF) ||
+                this.encodeTargetHeatingCoolingState[value];
+
+            if (validHeatingCoolingState) {
+                super.setTargetHeatingCoolingState(value, callback);
+            }
+            else {
+                callback('Not supported'); // TODO: this doesn't seem to signal error
+            }
+        }
+
+        pushState() {
+            const on = this.heatingCoolingState !== Characteristic.TargetHeatingCoolingState.OFF;
+            let aircon_params;
+            if (on) {
+                aircon_params = {
+                    power:       1,
+                    mode:        this.encodeTargetHeatingCoolingState[this.heatingCoolingState],
+                    temperature: this.targetTemperature,
+                };
+            }
+            else {
+                aircon_params = { power: 0 };
+            }
+
+            this.log(`Sending: ${JSON.stringify(aircon_params)}`);
+            const aircon_packets = AirconDiakinCoding.encode(aircon_params);
+            const ir_packet = bundleCommands(
+                // withEncoding(ENCODING.panasonicBytes, Buffer.from([0])),
+                withEncoding(ENCODING.panasonicBytes, aircon_packets[0]),
+                delayCommand(35),
+                withEncoding(ENCODING.panasonicBytes, aircon_packets[1])
+                );
+            this.mqtt_client.publish(this.config.sendTopic, ir_packet);
+        }
+    }
+
     homebridge.registerAccessory('homebridge-ir', 'ir-radioswitch', RadioSwitch);
     homebridge.registerAccessory('homebridge-ir', 'ir-momentaryswitch', MomentarySwitch);
     homebridge.registerAccessory('homebridge-ir', 'ir-aircon-mitsubishi-gp82', AirconMitsubishiGP82);
+    homebridge.registerAccessory('homebridge-ir', 'ir-aircon-diakin', AirconDaikin);
 };
