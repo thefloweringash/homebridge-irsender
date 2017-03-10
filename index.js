@@ -1,13 +1,23 @@
 const AirconMitsubishiGP82Coding = require('./aircon_mitsubishi_gp82');
 
 const withEncoding = (encoding, buffer) => {
-    const encoding_buffer = Buffer.alloc(4);
-    encoding_buffer.writeInt32LE(encoding);
+    const encoding_buffer = Buffer.from([encoding]);
     return Buffer.concat([
         encoding_buffer,
         buffer,
     ]);
 }
+
+const bundleCommands = (...commands) => {
+    const bufs = [
+        Buffer.from([commands.length]),
+    ];
+
+    for (const cmd of commands) {
+        bufs.push(Buffer.from([cmd.length]), cmd);
+    }
+    return Buffer.concat(bufs);
+};
 
 const toBuffer = (longs) => {
     const buffer = Buffer.alloc(longs.length * 4);
@@ -16,6 +26,7 @@ const toBuffer = (longs) => {
     }
     return buffer;
 };
+
 
 const ENCODING = {
     // from IRremote
@@ -38,41 +49,23 @@ const ENCODING = {
     unknown:    -1,
 
     // From my additional sender extensions
+    delay:           239,
     raw:             240,
     panasonic_bytes: 241,
 };
 
-const base64data = (encoding) => (data) =>
-    withEncoding(encoding, Buffer.from(data, 'base64'));
-
-const ENCODERS = {
-    panasonic_intervals(data) {
-        const frequency = 35;
-        const rawData = Buffer.from(data, 'base64');
-
-        const mark =  (x) => (x & -1)
-        const space = (x) => (x |  1);
-
-        const HDR_MARK   = mark(3502);
-        const HDR_SPACE  = space(1700);
-        const BIT_MARK   = mark(502);
-        const ONE_SPACE  = space(1244);
-        const ZERO_SPACE = space(400);
-
-        const payload = [ENCODING.raw, frequency, HDR_MARK, HDR_SPACE];
-        for (let byte of rawData.values()) {
-            for (let bit = 0; bit < 8; bit++) {
-                payload.push(BIT_MARK, byte & (1 << bit) ? ONE_SPACE : ZERO_SPACE);
-            }
-        }
-        payload.push(BIT_MARK);
-
-        return toBuffer(payload);
-    },
+const delayCommand = (length) => {
+    const buffer = Buffer.alloc(3);
+    buffer[0] = ENCODING.delay;
+    buffer.writeInt16LE(length, 1);
+    return buffer;
 };
 
+const SINGLE_PACKET_ENCODERS = {};
+
 for (const encoding_name of Object.keys(ENCODING)) {
-    ENCODERS[encoding_name] = base64data(ENCODING[encoding_name]);
+    SINGLE_PACKET_ENCODERS[encoding_name] = (data) =>
+        bundleCommands(withEncoding(ENCODING[encoding_name], Buffer.from(data, 'base64')));
 }
 
 module.exports = (homebridge) => {
@@ -93,7 +86,7 @@ module.exports = (homebridge) => {
             this.mqtt_client.on('error', this.onMQTTError.bind(this));
 
             if (this.config.encoding) {
-                this.encode = ENCODERS[this.config.encoding];
+                this.encode = SINGLE_PACKET_ENCODERS[this.config.encoding];
                 if (!this.encode) {
                     throw new Error(`Unknown encoding: ${this.config.encoding}`);
                 }
@@ -342,7 +335,7 @@ module.exports = (homebridge) => {
 
             this.log(`Sending: ${JSON.stringify(aircon_params)}`);
             const aircon_packet = AirconMitsubishiGP82Coding.encode(aircon_params);
-            const ir_packet = ENCODERS.panasonic_bytes(aircon_packet);
+            const ir_packet = SINGLE_PACKET_ENCODERS.panasonic_bytes(aircon_packet);
             this.mqtt_client.publish(this.config.sendTopic, ir_packet);
         }
     }
