@@ -21,10 +21,10 @@ const bundleCommands = (...commands) => {
     return Buffer.concat(bufs);
 };
 
-const toBuffer = (longs) => {
-    const buffer = Buffer.alloc(longs.length * 4);
-    for (let i = 0; i < longs.length; i++) {
-        buffer.writeInt32LE(longs[i], i * 4);
+const toBuffer = (shorts) => {
+    const buffer = Buffer.alloc(shorts.length * 2);
+    for (let i = 0; i < shorts.length; i++) {
+        buffer.writeInt16LE(shorts[i], i * 2);
     }
     return buffer;
 };
@@ -48,11 +48,11 @@ const ENCODING = {
     coolix:     15,
     daikin:     16,
     denon:      17,
+    raw:        30,
     unknown:    -1,
 
     // From my additional sender extensions
     delay:           239,
-    raw:             240,
     panasonic_bytes: 241,
 };
 
