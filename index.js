@@ -228,6 +228,29 @@ module.exports = (homebridge) => {
         constructor(log, config) {
             super(log, config);
 
+
+            const { receiveTemperatureTopic } = config;
+            if (receiveTemperatureTopic) {
+                this.mqtt_client.subscribe(receiveTemperatureTopic, (err, granted) => {
+                    if (err) {
+                        this.log(
+                            `Error subscribing to ${receiveTemperatureTopic}: ${JSON.stringify(err)}`);
+                    } else {
+                        this.log(
+                            `Subscribed to ${receiveTemperatureTopic}: ${JSON.stringify(granted)}`);
+                    }
+                });
+
+                const next = this.mqtt_client.handleMessage;
+                this.mqtt_client.handleMessage = (packet, callback) => {
+                    const { topic, payload } = packet;
+                    if (topic === receiveTemperatureTopic) {
+                        this.receivedTemperature = parseFloat(payload.toString());
+                    }
+                    next(packet, callback);
+                };
+            }
+
             this.heatingCoolingState = Characteristic.TargetHeatingCoolingState.OFF;
             this.targetTemperature   = 18;
 
@@ -261,7 +284,7 @@ module.exports = (homebridge) => {
         }
 
         getCurrentTemperature(callback) {
-            callback(null, this.targetTemperature);
+            callback(null, this.receivedTemperature || this.targetTemperature);
         }
 
         // Basic AC model
@@ -276,8 +299,10 @@ module.exports = (homebridge) => {
             this.pushState();
             callback();
 
-            this.thermostat.getCharacteristic(Characteristic.CurrentTemperature)
-                .setValue(this.targetTemperature, null);
+            if (!this.config.receiveTemperatureTopic) {
+                this.thermostat.getCharacteristic(Characteristic.CurrentTemperature)
+                    .setValue(this.targetTemperature, null);
+            }
         }
 
         setTargetHeatingCoolingState(value, callback) {
