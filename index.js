@@ -1,3 +1,4 @@
+const URL = require('url');
 const AirconMitsubishiGP82Coding = require('./aircon_mitsubishi_gp82');
 const AirconDakinCoding = require('./aircon_daikin');
 
@@ -84,7 +85,9 @@ module.exports = (homebridge) => {
 
             const mqtt_config = this.parseMQTTConfig(this.config.mqtt);
             this.mqtt_client = mqtt.connect(mqtt_config);
-            this.mqtt_client.on('error', this.onMQTTError.bind(this));
+            for (const msg of ['connect', 'reconnect', 'close', 'offline', 'error', 'end']) {
+                this.mqtt_client.on(msg, (e) => { this.log(msg + JSON.stringify(e)); } );
+            }
 
             if (this.config.encoding) {
                 this.encode = SINGLE_PACKET_ENCODERS[this.config.encoding];
@@ -107,17 +110,14 @@ module.exports = (homebridge) => {
                 clean = true,
                 reconnectPeriod = 1000,
                 username = undefined,
-                password = undefined
+                password = undefined,
+                url = undefined,
             } = config;
 
             return {
                 clientId, keepalive, protocolId, protocolVersion, clean,
-                reconnectPeriod, username, password
+                reconnectPeriod, username, password, ...URL.parse(url),
             };
-        }
-
-        onMQTTError() {
-            this.log('mqtt error');
         }
 
         sendIR(data) {
