@@ -86,7 +86,7 @@ module.exports = (homebridge) => {
             const mqtt_config = this.parseMQTTConfig(this.config.mqtt);
             this.mqtt_client = mqtt.connect(mqtt_config);
             for (const msg of ['connect', 'reconnect', 'close', 'offline', 'error', 'end']) {
-                this.mqtt_client.on(msg, (e) => { this.log(msg + JSON.stringify(e)); } );
+                this.mqtt_client.on(msg, (e) => { this.log(`mqtt event: ${msg}: ${JSON.stringify(e)}`); });
             }
 
             if (this.config.encoding) {

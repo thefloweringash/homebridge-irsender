@@ -14,5 +14,7 @@
   },
   "author": "Andrew Childs <lorne@cons.org.nz>",
   "license": "BSD-2-Clause",
-  "dependencies": {}
+  "dependencies": {
+    "mqtt": "^2.18.0"
+  }
 }
